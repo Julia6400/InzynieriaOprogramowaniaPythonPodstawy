@@ -1,24 +1,61 @@
-def verify_pesel(pesel: str) -> int:
+import re
+from collections import defaultdict, Counter
+
+def index_documents(documents: list[str], queries: list[str]) -> list[list[int]]:
     """
-    Weryfikuje numer PESEL.
+    Przetwarza dokumenty i zapytania, zwracając listy indeksów dokumentów,
+    w których występuje zapytanie, posortowane według częstości wystąpienia
+    danego wyrazu (malejąco), a w przypadku równych częstości - malejąco wg numeru dokumentu.
 
     Args:
-        pesel (str): Numer PESEL w postaci ciągu 11 znaków.
+        documents (list[str]): Lista dokumentów (każdy dokument to ciąg znaków).
+        queries (list[str]): Lista zapytań (każdy zapytanie to pojedynczy wyraz).
 
     Returns:
-        int: 1 jeśli numer jest poprawny, 0 jeśli nie.
+        list[list[int]]: Lista wyników dla kolejnych zapytań.
     """
-    if len(pesel) != 11 or not pesel.isdigit():
-        print("Błąd: PESEL musi zawierać dokładnie 11 cyfr.")
-        return 0
+    # Przetwarzanie dokumentów: usuwanie interpunkcji, zamiana na małe litery, liczenie słów
+    doc_word_counts = []
+    for doc in documents:
+        words = re.findall(r'\b\w+\b', doc.lower())
+        counter = Counter(words)
+        doc_word_counts.append(counter)
 
-    weights = [1, 3, 7, 9, 1, 3, 7, 9, 1, 3]
-    suma = sum(int(pesel[i]) * weights[i] for i in range(10))
-    kontrolna = (10 - (suma % 10)) % 10
-    return 1 if kontrolna == int(pesel[10]) else 0
+    results = []
+    for query in queries:
+        query = query.lower()
+        freq_list = []
+        for i, counter in enumerate(doc_word_counts):
+            count = counter.get(query, 0)
+            if count > 0:
+                freq_list.append((count, -i))  # -i bo sortujemy malejąco wg numeru dokumentu w razie remisu
+        # Sortowanie: najpierw po częstości malejąco, potem po indeksie dokumentu malejąco
+        freq_list.sort(reverse=True)
+        sorted_doc_ids = [-idx for _, idx in freq_list]
+        results.append(sorted_doc_ids)
+    return results
 
 
+# Przykładowe wywołanie:
 if __name__ == "__main__":
-    pesel_input = input("Podaj numer PESEL (11 cyfr): ")
-    wynik = verify_pesel(pesel_input)
-    print(wynik)
+    # Pobranie liczby dokumentów
+    n = int(input("Podaj liczbę dokumentów: "))
+    documents = []
+    print("Wprowadź kolejne dokumenty:")
+    for _ in range(n):
+        documents.append(input())
+
+    # Pobranie liczby zapytań
+    m = int(input("Podaj liczbę zapytań: "))
+    queries = []
+    print("Wprowadź kolejne zapytania:")
+    for _ in range(m):
+        queries.append(input().strip())
+
+    # Przetworzenie zapytań
+    results = index_documents(documents, queries)
+
+    # Wypisanie wyników
+    print("Wyniki:")
+    for res in results:
+        print(res)
